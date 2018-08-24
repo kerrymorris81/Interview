@@ -25,28 +25,53 @@ myKey='For security best practice, key is omitted but would be provided here'
 ec2 = boto3.resource('ec2')
 
 # Defines our Virtual Private Cloud
-vpc = ec2.create_vpc(CidrBlock='10.0.0.0/24')
+vpc = ec2.create_vpc(CidrBlock='10.0.0.0/27'
+                     AmazonProvidedIpv6CidrBlock=False, # Since we are providing our CIDR block, we leave this false
+                     DryRun=True,  # Checks our permissions 
+                     InstanceTenancy='dedicated' # This will ensure instances are  launched in a VPC run on hardware that's dedicated to a single customer.
+                    )
 
 # Establishes our subnet
-subnet = vpc.create_subnet(CidrBlock='10.0.0.0/25')
+subnet = vpc.create_subnet(CidrBlock='10.0.0.0/28')
 
-# Creates a gateway
+# Creates a gateway, since we don't have a specified gateway, we will not provide a gateway id.
 gateway = ec2.create_internet_gateway()
 
 # Attaches our Gateway to our VPC
-gateway.attach_to_vpc(VpcId=vpc.vpc_id)
+gateway.attach_to_vpc(VpcId=vpc.vpc_id
+                     )
+
+# Associates our gateway Id address
+address = ec2.VpcAddress(VpcId)
+address.associate(gateway) # This'll give us a place holder until our routing table is set up.
 
 # Creates a routing table
-routeTable = vpc.create_route_table()
+routeTable = vpc.create_route_table(VpcId=vpc.vpc_id
+                                    DryRun=True
+                                    )
 
-# Routing setup
-ipv4 = routeTable.create_route(DestinationCidrBlock='0.0.0.0/0', GatewayId=gateway.internet_gateway_id)
-ipv6 = routeTable.create_route(DestinationIpv6CidrBlock='::/0', GatewayId=gateway.internet_gateway_id)
+# Routing setup, other parameters are allowed if needed to be specified, but we will use defaults
+ipv4 = routeTable.create_route(DestinationCidrBlock='0.0.0.0/0', 
+                               GatewayId=gateway.internet_gateway_id,
+                               DryRun=True
+                              )
+ipv6 = routeTable.create_route(DestinationIpv6CidrBlock='::/0', 
+                               GatewayId=gateway.internet_gateway_id,
+                               DryRun=True
+                              )
 
-routeTable.associate_with_subnet(SubnetId=subnet.subnet_id)
+#Grabs our ID's for subnet association and then associates subnet
+subnet = ec2.Subnet('id')
+routeTabeId = ec2.describe_route_table('RouteTableId')
+routeTable.associate_with_subnet(SubnetId=subnet.subnet_id
+                                 RouteTableId=routeTableId,
+                                 SubnetId=subnet,
+                                )
 
 # Instantiantes our Security Group
-security = vpc.create_security_group(GroupName="connectrians", Description="This is my sample group")
+security = vpc.create_security_group(GroupName="connectrians", 
+                                     Description="This is my sample group"
+                                    )
 
 ipv4range = [{
     'CidrIp': '0.0.0.0/0'
@@ -70,13 +95,14 @@ ports = [{
     'Ipv6Ranges': ipv6range
 }, {
     'IpProtocol': 'TCP',
-    'FromPort': 22, #FTP Port
+    'FromPort': 22, #SSH Port
     'ToPort': 22,
     'IpRanges': ipv4range,  # Change to supplement use case
     'Ipv6Ranges': ipv6range  # Change to supplement use case
 }]
 
-security.authorize_ingress(IpPermissions=ports)
+# Uses our above values in the function
+security.authorize_security_group_ingress(IpPermissions=ports)
 
 # Grab ARN for use in EC2 Instance instantiation
 client = boto3.client('iam')
