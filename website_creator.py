@@ -1,9 +1,9 @@
 #  The goal of this script is to create a VPC, a gateway which is attached to the VPC, subnet for our vpc using specified
 #  CIDR block, and creating an EC2 Instance. In the EC2 Instance, we will create and populate a database table in DynamoDB,
-#  create an S3 bucket, and upload local files making a webpage. This webpage will display the names and roles of the AWS
-#  team stored in our DB table. Best practice is variables instantiated outside of functions to promote scalability and
-#  mutability. Second Best Practice is to keep each function compartmentalized. This is usually done is seperate scripts,
-#  but in the interest of time and simplicity, one script runs all functions.
+#  create an S3 bucket, and a looped file uploader for our new bucket. Best practice is variables instantiated outside of 
+#  functions to promote scalability and mutability, with no hard values coded. Second Best Practice is to keep each function 
+#  compartmentalized. This is usually done is seperate scripts, but in the interest of time and simplicity, one script runs 
+#  all functions.
 
 
 import boto3
@@ -135,9 +135,8 @@ subprocess.run('$SECURITY_GROUP=connectrians')
 subprocess.run('$REGION=us-east-1')
 subprocess.run('$BUCKET=connectrianbucket')
 
-subprocess.run('aws', 's3api', 'create-bucket', '--bucket $BUCKET', '--region $REGION')
-
 # Runs following CLI command: aws s3api create-bucket --bucket $BUCKET --region $REGION
+subprocess.run('aws', 's3api', 'create-bucket', '--bucket $BUCKET', '--region $REGION')
 
 # Create the S3 client
 s3 = boto3.client('s3')
@@ -151,9 +150,8 @@ buckets = [bucket['Name'] for bucket in query['Buckets']]
 # Assign the bucket name to a local variable
 myBucket = print(buckets)
 
-# Upload files to bucket
-filename = array.array(subprocess.run('ls', '>', 'files.txt', '|', 'cat', 'files.txt'))
 #Runs CLI command ls > files.txt | cat files.txt
+filename = array.array(subprocess.run('ls', '>', 'files.txt', '|', 'cat', 'files.txt'))
 
 # Parses array for upload and pushes files
 for x in filename:
@@ -214,7 +212,6 @@ role = array.array("Director of Cloud Services", "Cloud Architect", "Systems Eng
                    "AWS Administrator")
 
 # Puts items into created database. A Multi-Dimensional array could also be used but not as practical with just two values.
-
 for y in name:
     myTable.put_item(
         Item={
